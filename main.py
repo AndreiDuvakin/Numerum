@@ -5,34 +5,12 @@ import pandas as pd
 import plotly.figure_factory as ff
 
 
-class Sudna:
+class ShipTraffic:
     def parse_reqs(self, reqs):  # функция перебора заявок
         resp = list(map(lambda x: self.processing_req(x),
                         sorted(reqs, key=lambda x: (datetime.datetime.strptime(x[6], '%d.%m.%Y %H:%M'),
                                                     datetime.datetime.strptime(x[7], '%d.%m.%Y %H:%M')))))
         self.made_gant(resp)
-
-    @staticmethod
-    def made_gant(data):
-        from data import skip_status
-        gant_data = []
-        h = 1
-        for i in data:
-            if i[0] == 403:
-                for j in i[1]:
-                    gant_data.append(dict(Task=f'Заявка №{str(h)}', Start=j[1], Finish=j[2], Resource=skip_status[3]))
-            else:
-                for j in i:
-                    gant_data.append(
-                        dict(Task=f'Заявка №{str(h)}', Start=j[1], Finish=j[2], Resource=skip_status[int(j[-1])]))
-            h += 1
-        colors = {'Проход невозможен': 'rgb(220, 0, 0)',
-                  'Нужна проводка': (1, 0.9, 0.16),
-                  'Самостоятельно': 'rgb(0, 255, 100)'}
-
-        fig = ff.create_gantt(gant_data, colors=colors, index_col='Resource', show_colorbar=True,
-                              group_tasks=True)
-        fig.show()
 
     def processing_req(self, req):  # функция обработки заявки
         req[6] = datetime.datetime.strptime(req[6], '%d.%m.%Y %H:%M')
@@ -47,7 +25,7 @@ class Sudna:
         time_rout1, time_rout2 = self.time_route_maker(rout1, req), self.time_route_maker(rout2, req)
         return [time_rout1, time_rout2]
 
-    def can_swim(self, time_interval, req):  # функция определения плотности льда на пути ледокола
+    def can_swim(self, time_interval, req):  # функция определения плотности льда на пути транспортного судна
         swim_route_1, swim_route_2 = self.ice_density(time_interval[0], req[2]), self.ice_density(time_interval[1],
                                                                                                   req[2])
         if swim_route_1 != 403 and swim_route_2 != 403:
@@ -96,11 +74,33 @@ class Sudna:
             time_route.append(time_rout)
         return time_route[::-1]
 
+    @staticmethod
+    def made_gant(data):
+        from data import skip_status
+        gant_data = []
+        h = 1
+        for i in data:
+            if i[0] == 403:
+                for j in i[1]:
+                    gant_data.append(dict(Task=f'Заявка №{str(h)}', Start=j[1], Finish=j[2], Resource=skip_status[3]))
+            else:
+                for j in i:
+                    gant_data.append(
+                        dict(Task=f'Заявка №{str(h)}', Start=j[1], Finish=j[2], Resource=skip_status[int(j[-1])]))
+            h += 1
+        colors = {'Проход невозможен': 'rgb(220, 0, 0)',
+                  'Нужна проводка': (1, 0.9, 0.16),
+                  'Самостоятельно': 'rgb(0, 255, 100)'}
+
+        fig = ff.create_gantt(gant_data, colors=colors, index_col='Resource', show_colorbar=True,
+                              group_tasks=True)
+        fig.show()
+
 
 def main():
     from data import icebreakers_requests
 
-    sd = Sudna()
+    sd = ShipTraffic()
     sd.parse_reqs(icebreakers_requests)
 
 
