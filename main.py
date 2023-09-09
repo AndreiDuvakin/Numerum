@@ -4,14 +4,28 @@ import plotly.figure_factory as ff
 
 class ShipTraffic:
     def parse_reqs(self, reqs):  # функция перебора заявок
+        reqs = list(map(lambda x: self.make_datetime(x), reqs))
         resp = list(map(lambda x: self.processing_req(x),
-                        sorted(reqs, key=lambda x: (datetime.datetime.strptime(x[6], '%d.%m.%Y %H:%M'),
-                                                    datetime.datetime.strptime(x[7], '%d.%m.%Y %H:%M')))))
+                        sorted(reqs, key=lambda x: (x[6], x[7]))))
         self.made_gant(resp)
+        h = 0
+        while not all(list(map(lambda x: True if x[0] != 403 else False, resp))):
+            if h > 20:
+                break
+            not_allowed = list(filter(lambda x: x[0] == 403, resp))
+            not_reqs = []
+            for i in not_allowed:
+                start_id = i[1][-1][1]
+                req = list(filter(lambda x: x[6] == start_id, reqs))
+                reqs[reqs.index(req[0])][6] -= datetime.timedelta(days=1)
+                i[1][-1][1] -= datetime.timedelta(days=1)
+            resp = list(map(lambda x: self.processing_req(x),
+                            sorted(reqs, key=lambda x: (x[6], x[7]))))
+            h += 1
+        if h < 20:
+            self.made_gant(resp)
 
     def processing_req(self, req):  # функция обработки заявки
-        req[6] = datetime.datetime.strptime(req[6], '%d.%m.%Y %H:%M')
-        req[7] = datetime.datetime.strptime(req[7], '%d.%m.%Y %H:%M')
         time_interval = self.ship_graph_time(req)
         route = self.can_swim(time_interval, req)
         return route
@@ -57,6 +71,12 @@ class ShipTraffic:
                     return 403
                 resp.append([i[0], i[1], i[2], ice_can[int(weather)][class_can[req]]])
         return resp[::-1]
+
+    @staticmethod
+    def make_datetime(req):
+        req[6] = datetime.datetime.strptime(req[6], '%d.%m.%Y %H:%M')
+        req[7] = datetime.datetime.strptime(req[7], '%d.%m.%Y %H:%M')
+        return req
 
     @staticmethod
     def time_route_maker(rout, req):
